@@ -1,0 +1,13 @@
+[package]
+name = "fastembedserver"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.86"
+fastembed = "3.9.1"
+serde = "1.0.204"
+shuttle-runtime = "0.46.0"
+shuttle-warp = "0.46.0"
+tokio = "1.26.0"
+warp = "0.3.3"
