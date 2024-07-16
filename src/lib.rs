@@ -55,7 +55,7 @@ pub fn embed(text: &str) -> Result<Embedding, Error> {
 
     // With custom InitOptions
     let model = TextEmbedding::try_new(InitOptions {
-        model_name: EmbeddingModel::MxbaiEmbedLargeV1Q,
+        model_name: EmbeddingModel::MxbaiEmbedLargeV1,
         show_download_progress: true,
         ..Default::default()
     })?;
