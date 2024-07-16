@@ -19,14 +19,14 @@ struct QueryInput {
 
 #[shuttle_runtime::main]
 async fn warp() -> shuttle_warp::ShuttleWarp<(impl Reply,)> {
-    let json_route = warp::any()
+    let json_route = warp::post()
+        .and(warp::path!("embeddings"))
         .and(warp::body::json())
         .map(|input: Input| {
             let embedding = embed(&input.input).unwrap_or_default();
             println!("{}", embedding.len());
             warp::reply::json(&embedding)
         });
-
     let query_route = warp::get()
         .and(warp::query::query::<QueryInput>())
         .map(|query_input: QueryInput| {
