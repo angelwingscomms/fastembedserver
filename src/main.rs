@@ -1,19 +1,43 @@
-use std::collections::HashMap;
+// use std::collections::HashMap;
+use warp::{Filter, Reply};
+use serde::Deserialize;
 
 use fastembedserver::embed;
-use warp::{Filter, Reply};
+#[derive(Deserialize)]
+struct Input {
+    input: String,
+    model: Option<String>,
+    format: Option<String>,
+    dimensions: Option<usize>,
+    params: Option<std::collections::HashMap<String, String>>,
+}
+
+#[derive(Deserialize)]
+struct QueryInput {
+    q: String,
+}
 
 #[shuttle_runtime::main]
 async fn warp() -> shuttle_warp::ShuttleWarp<(impl Reply,)> {
-    let route = warp::any()
-        .and(warp::query::query())
-        .map(|query: HashMap<String, String>| {
-            let default_query = "".to_string();
-            let q = query.get("q").unwrap_or(&default_query);
-
-            let embedding = embed(&q.clone()).unwrap_or_default();
+    let json_route = warp::any()
+        .and(warp::body::json())
+        .map(|input: Input| {
+            let embedding = embed(&input.input).unwrap_or_default();
+            println!("{}", embedding.len());
             warp::reply::json(&embedding)
         });
 
-    Ok(route.boxed().into())
+    let query_route = warp::get()
+        .and(warp::query::query::<QueryInput>())
+        .map(|query_input: QueryInput| {
+            let embedding = embed(&query_input.q).unwrap_or_default();
+            println!("{}", embedding.len());
+            warp::reply::json(&embedding)
+        });
+    Ok(json_route.or(query_route).boxed().into())
 }
+
+// pub fn main() {
+//     let all = process_json_file("t_ylt.json").unwrap();
+//     println!("{:#?}", all)
+// }

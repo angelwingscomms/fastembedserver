@@ -550,6 +550,7 @@ dependencies = [
  "anyhow",
  "fastembed",
  "serde",
+ "serde_json",
  "shuttle-runtime",
  "shuttle-warp",
  "tokio",
