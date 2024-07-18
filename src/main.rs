@@ -1,4 +1,4 @@
-use fastembedserver::embed;
+use fastembedserver::{embed, process_json_file};
 use serde::{Deserialize, Serialize};
 use warp::{Filter, Reply};
 
@@ -32,6 +32,7 @@ struct VecEmbedding {
 
 #[shuttle_runtime::main]
 async fn warp() -> shuttle_warp::ShuttleWarp<(impl Reply,)> {
+    // process_json_file("t_ylt.json").unwrap();
     let json_route = warp::post()
         .and(warp::path!("embeddings"))
         .and(warp::body::json())
@@ -68,5 +69,3 @@ async fn warp() -> shuttle_warp::ShuttleWarp<(impl Reply,)> {
 
     Ok(json_route.or(query_route).boxed().into())
 }
-// pub fn main() { let all = process_json_file("t_ylt.json").unwrap(); println!("{:#?}", all)
-// }
