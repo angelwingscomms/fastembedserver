@@ -49,6 +49,24 @@ async fn warp() -> shuttle_warp::ShuttleWarp<(impl Reply,)> {
             warp::reply::json(&response)
         });
 
+    let json_buffer_route = warp::post()
+        .and(warp::path!("embeddings"))
+        .and(warp::header("b"))
+        .and(warp::body::json())
+        .map(|_: String, input: Input| {
+            let embedding = embed(&input.input).unwrap_or_default();
+            let response = ApiResponse {
+                object: "list",
+                data: vec![VecEmbedding {
+                    object: "embedding",
+                    embedding,
+                    index: 0,
+                }],
+                model: "mxbai-embed-large-v1",
+            };
+            warp::reply::json(&response)
+        });
+
     let json_plain_route = warp::post()
         .and(warp::path!("embeddings"))
         .and(warp::body::json())
@@ -61,9 +79,19 @@ async fn warp() -> shuttle_warp::ShuttleWarp<(impl Reply,)> {
                 warp::reply::json(&embed(&query_input.q).unwrap_or_default())
             });
 
+    let query_buffer_route =
+        warp::get()
+            .and(warp::header("b"))
+            .and(warp::query::query::<QueryInput>())
+            .map(|_: String, query_input: QueryInput| {
+                warp::reply::json(&embed(&query_input.q).unwrap_or_default())
+            });
+
     Ok(json_route
+        .or(json_buffer_route)
         .or(json_plain_route)
         .or(query_route)
+        .or(query_buffer_route)
         .boxed()
         .into())
 }
