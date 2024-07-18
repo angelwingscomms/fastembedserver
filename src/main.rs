@@ -1,4 +1,4 @@
-use fastembedserver::{embed, process_json_file};
+use fastembedserver::embed;
 use serde::{Deserialize, Serialize};
 use warp::{Filter, Reply};
 
@@ -32,7 +32,6 @@ struct VecEmbedding {
 
 #[shuttle_runtime::main]
 async fn warp() -> shuttle_warp::ShuttleWarp<(impl Reply,)> {
-    // process_json_file("t_ylt.json").unwrap();
     let json_route = warp::post()
         .and(warp::path!("embeddings"))
         .and(warp::body::json())
@@ -50,22 +49,21 @@ async fn warp() -> shuttle_warp::ShuttleWarp<(impl Reply,)> {
             warp::reply::json(&response)
         });
 
+    let json_plain_route = warp::post()
+        .and(warp::path!("embeddings"))
+        .and(warp::body::json())
+        .map(|input: Input| warp::reply::json(&embed(&input.input).unwrap_or_default()));
+
     let query_route =
         warp::get()
             .and(warp::query::query::<QueryInput>())
             .map(|query_input: QueryInput| {
-                let embedding = embed(&query_input.q).unwrap_or_default();
-                let response = ApiResponse {
-                    object: "list",
-                    data: vec![VecEmbedding {
-                        object: "embedding",
-                        embedding,
-                        index: 0,
-                    }],
-                    model: "text-embedding-ada-002",
-                };
-                warp::reply::json(&response)
+                warp::reply::json(&embed(&query_input.q).unwrap_or_default())
             });
 
-    Ok(json_route.or(query_route).boxed().into())
+    Ok(json_route
+        .or(json_plain_route)
+        .or(query_route)
+        .boxed()
+        .into())
 }

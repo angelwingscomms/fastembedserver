@@ -26,38 +26,76 @@ struct Row {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct MyStruct {
-    i: String,
+pub struct Embed {
+    i: i32,
     v: Vec<f32>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ParsedRow {
+    i: i32,
+    b: i32,
+    c: i32,
+    v: i32,
+    t: String,
 }
 
 // type Books = Vec<String>;
 
-pub fn process_json_file(file_path: &str) -> Result<(), Error> {
+pub fn process_json_file(file_path: &str) -> Result<Vec<ParsedRow>, Error> {
     let json_data: JsonData = serde_json::from_str(&std::fs::read_to_string(file_path)?)?;
     // let books: Books = serde_json::from_str(&std::fs::read_to_string("books.json")?)?;
 
-    let mut structs: Vec<MyStruct> = Vec::new();
+    let mut rows: Vec<ParsedRow> = Vec::new();
 
     for row in json_data.resultset.row {
-        let text = match &row.field[3] {
-            FieldValue::I32(x) => x.to_string(),
-            FieldValue::Str(x) => x.to_string(),
-        };
         if row.field.len() >= 4 {
-            structs.push(MyStruct {
-                i: match &row.field[0] {
-                    FieldValue::I32(x) => x.to_string(),
-                    FieldValue::Str(x) => x.to_string(),
+            rows.push(ParsedRow {
+                i: if let FieldValue::I32(l) = row.field[0] {
+                    l
+                } else {
+                    panic!("i not i32")
                 },
-                v: embed(&text).unwrap(),
+                b: if let FieldValue::I32(l) = row.field[1] {
+                    l
+                } else {
+                    panic!("b not i32")
+                },
+                c: if let FieldValue::I32(l) = row.field[2] {
+                    l
+                } else {
+                    panic!("c not i32")
+                },
+                v: if let FieldValue::I32(l) = row.field[3] {
+                    l
+                } else {
+                    panic!("v not i32")
+                },
+                t: if let FieldValue::Str(l) = &row.field[4] {
+                    l.to_string()
+                } else {
+                    panic!("t not string")
+                },
             });
         }
     }
+    Ok(rows)
+}
 
-    let json_string = serde_json::to_string_pretty(&structs)?;
-    std::fs::write("output.json", json_string)?;
-    Ok(())
+pub fn embed_verses() {
+    let mut rows_embed: Vec<Embed> = vec![];
+    for row in process_json_file("t_ylt.json").unwrap() {
+        rows_embed.push(Embed {
+            i: row.i,
+            v: embed(&row.t).unwrap(),
+        });
+        println!("{}", row.i)
+    }
+    std::fs::write(
+        "verses_embed.json",
+        serde_json::to_string_pretty(&rows_embed).unwrap(),
+    )
+    .unwrap();
 }
 
 pub fn embed(text: &str) -> Result<Embedding, Error> {
