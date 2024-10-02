@@ -67,8 +67,7 @@ async fn warp() -> shuttle_warp::ShuttleWarp<(impl Reply,)> {
             warp::reply::json(&response)
         });
 
-    let json_plain_route = warp::post()
-        .and(warp::path!("embeddings"))
+    let json_plain_route = warp::path::end().and(warp::post())
         .and(warp::body::json())
         .map(|input: Input| warp::reply::json(&embed(&input.input).unwrap_or_default()));
 
