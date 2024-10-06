@@ -82,20 +82,21 @@ pub fn process_json_file(file_path: &str) -> Result<Vec<ParsedRow>, Error> {
     Ok(rows)
 }
 
-pub fn embed_verses() {
-    let mut rows_embed: Vec<Embed> = vec![];
+pub async fn embed_verses() {
+    // let mut rows_embed: Vec<Embed> = vec![];
     for row in process_json_file("t_ylt.json").unwrap() {
-        rows_embed.push(Embed {
-            i: row.i,
-            v: embed(&row.t).unwrap(),
-        });
+        // rows_embed.push(Embed {
+        //     i: row.i,
+        //     v: embed(&row.t).unwrap(),
+        // });
+        reqwest::Client::new().put(format!("{}/collections/i/points", std::env::var("QDRANT_URL").unwrap())).bearer_auth(std::env::var("QDRANT_KEY").unwrap()).body(format!(r#"{{points: [{{"id":"{}", "payload": {{"b": {}, "c": {}, "v": {}}}, "vector": {}, }}]}}"#, row.i, row.b, row.c, row.v, serde_json::to_string(&embed(&row.t).unwrap()).unwrap())).send().await.unwrap();
         println!("{}", row.i)
     }
-    std::fs::write(
-        "verses_embed.json",
-        serde_json::to_string_pretty(&rows_embed).unwrap(),
-    )
-    .unwrap();
+    // std::fs::write(
+    //     "verses_embed.json",
+    //     serde_json::to_string_pretty(&rows_embed).unwrap(),
+    // )
+    // .unwrap();
 }
 
 pub fn embed(text: &str) -> Result<Embedding, Error> {

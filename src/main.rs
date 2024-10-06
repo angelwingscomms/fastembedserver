@@ -1,6 +1,6 @@
-use fastembedserver::embed;
+use fastembedserver::{embed, embed_verses};
 use serde::{Deserialize, Serialize};
-use warp::{Filter, Reply};
+use warp::{reply::WithStatus, Filter, Reply};
 
 #[derive(Deserialize)]
 struct Input {
@@ -30,8 +30,16 @@ struct VecEmbedding {
     index: usize,
 }
 
+async fn embed_verses_handler() -> impl Reply {
+    embed_verses().await;
+    warp::reply::json(&String::new())
+}
+
 #[shuttle_runtime::main]
 async fn warp() -> shuttle_warp::ShuttleWarp<(impl Reply,)> {
+    let embed_verses_route = warp::get()
+        .and(warp::path!("embed_verses"))
+        .then(embed_verses_handler);
     let json_route = warp::post()
         .and(warp::path!("embeddings"))
         .and(warp::body::json())
@@ -67,7 +75,8 @@ async fn warp() -> shuttle_warp::ShuttleWarp<(impl Reply,)> {
             warp::reply::json(&response)
         });
 
-    let json_plain_route = warp::path::end().and(warp::post())
+    let json_plain_route = warp::path::end()
+        .and(warp::post())
         .and(warp::body::json())
         .map(|input: Input| warp::reply::json(&embed(&input.input).unwrap_or_default()));
 
@@ -78,15 +87,15 @@ async fn warp() -> shuttle_warp::ShuttleWarp<(impl Reply,)> {
                 warp::reply::json(&embed(&query_input.q).unwrap_or_default())
             });
 
-    let query_buffer_route =
-        warp::get()
-            .and(warp::header("b"))
-            .and(warp::query::query::<QueryInput>())
-            .map(|_: String, query_input: QueryInput| {
-                warp::reply::json(&embed(&query_input.q).unwrap_or_default())
-            });
+    let query_buffer_route = warp::get()
+        .and(warp::header("b"))
+        .and(warp::query::query::<QueryInput>())
+        .map(|_: String, query_input: QueryInput| {
+            warp::reply::json(&embed(&query_input.q).unwrap_or_default())
+        });
 
     Ok(json_route
+        .or(embed_verses_route)
         .or(json_buffer_route)
         .or(json_plain_route)
         .or(query_route)
