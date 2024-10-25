@@ -33,11 +33,11 @@ pub struct Embed {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ParsedRow {
-    i: i32,
-    b: i32,
-    c: i32,
-    v: i32,
-    t: String,
+    pub i: i32,
+    pub b: i32,
+    pub c: i32,
+    pub v: i32,
+    pub t: String,
 }
 
 // type Books = Vec<String>;
