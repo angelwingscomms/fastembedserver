@@ -1,5 +1,6 @@
 use fastembedserver::{embed, embed_verses, process_json_file};
 use serde::{Deserialize, Serialize};
+use tokio::task;
 use warp::{reply::WithStatus, Filter, Reply};
 
 #[derive(Deserialize)]
@@ -30,11 +31,15 @@ struct VecEmbedding {
     index: usize,
 }
 
-async fn embed_verses_handler() -> impl Reply {
+async fn embed_verses_f() {
     for row in process_json_file("t_ylt.json").unwrap() {
-        reqwest::Client::new().put(format!("{}/collections/i/points", std::env::var("QDRANT_URL").unwrap())).bearer_auth(std::env::var("QDRANT_KEY").unwrap()).body(format!(r#"{{points: [{{"id":"{}", "payload": {{"b": {}, "c": {}, "v": {}}}, "vector": {}, }}]}}"#, row.i, row.b, row.c, row.v, serde_json::to_string(&embed(&row.t).unwrap()).unwrap())).send().await.unwrap();
-        println!("{}", row.i)
+        let res = reqwest::Client::new().put(format!("{}/collections/i/points?wait=true", std::env::var("QDRANT_URL").unwrap())).bearer_auth(std::env::var("QDRANT_KEY").unwrap()).body(format!(r#"{{points: [{{"id":"{}", "payload": {{"b": {}, "c": {}, "v": {}}}, "vector": {}, }}]}}"#, row.i, row.b, row.c, row.v, serde_json::to_string(&embed(&row.t).unwrap()).unwrap())).send().await.unwrap();
+        println!("{} res: {:#?}", row.i, res);
     }
+}
+
+async fn embed_verses_handler() -> impl Reply {
+    task::spawn(embed_verses_f());
     warp::reply::with_status("", warp::http::StatusCode::OK)
 }
 
