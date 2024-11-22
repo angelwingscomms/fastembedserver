@@ -110,7 +110,7 @@ pub fn embed(text: &str) -> Result<Embedding, Error> {
         ..Default::default()
     })?;
 
-    let documents = vec!["query: {}", text];
+    let documents = vec![text];
 
     // Generate embeddings with the default batch size, 256
     let embeddings = model.embed(documents, None)?;
