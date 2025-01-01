@@ -1,8 +1,8 @@
-use fastembedserver::{embed, embed_verses, process_json_file};
+use fastembedserver::{embed, process_verses, process_verses_verbose};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tokio::task;
-use warp::{reply::WithStatus, Filter, Reply};
+use warp::{Filter, Reply};
 
 #[derive(Deserialize)]
 struct Input {
@@ -33,9 +33,11 @@ struct VecEmbedding {
 }
 
 async fn embed_verses_f() -> anyhow::Result<()> {
-    for row in process_json_file("t_ylt.json")? {
-        let res = reqwest::Client::new().put(format!("{}/collections/i/points?wait=true", std::env::var("QDRANT_URL")?)).bearer_auth(std::env::var("QDRANT_KEY")?).body(format!(r#"{{points: [{{"id":"{}", "payload": {{"b": {}, "c": {}, "v": {}}}, "vector": {}, }}]}}"#, row.i, row.b, row.c, row.v, serde_json::to_string(&embed(&row.t)?)?)).send().await?;
-        println!("{} res: {:#?}", row.i, res);
+    let mut id = 0;
+    for row in process_verses_verbose("t_ylt.json", "books.json")? {
+        let res = reqwest::Client::new().put(format!("{}/collections/i/points?wait=true", std::env::var("QDRANT_URL")?)).bearer_auth(std::env::var("QDRANT_KEY")?).body(json!({"points": [{"id":id, "payload": row, "vector": &embed(&serde_json::to_string(&row)?)? }]}).to_string()).send().await?;
+        println!("{} res: {:#?}", id, res);
+        id += 1;
     }
     Ok(())
 }
@@ -55,6 +57,16 @@ async fn warp() -> shuttle_warp::ShuttleWarp<(impl Reply,)> {
         .then(embed_verses_handler);
 
     // maybe buffer routes
+    //
+    let process_route = warp::get().and(warp::path!("process_verses")).map(|| {
+        std::fs::write(
+            "ylt.json",
+            serde_json::to_string_pretty(&process_verses("t_ylt.json", "books.json").unwrap())
+                .unwrap(),
+        )
+        .unwrap();
+        warp::reply::with_status("", warp::http::StatusCode::OK)
+    });
 
     let json_route = warp::post()
         .and(warp::path!("embeddings"))
@@ -102,6 +114,7 @@ async fn warp() -> shuttle_warp::ShuttleWarp<(impl Reply,)> {
     Ok(json_route
         .or(embed_verses_route)
         .or(json_plain_route)
+        .or(process_route)
         .or(query_route)
         .boxed()
         .into())
